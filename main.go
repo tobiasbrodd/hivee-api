@@ -3,19 +3,47 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"log"
+	"io/ioutil"
 	"net/http"
 	"os"
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	log "github.com/sirupsen/logrus"
+	"github.com/tobiasbrodd/hivee-api/internal/storage"
+	"gopkg.in/yaml.v3"
 )
 
-type Data struct {
-	Content string `json:"content"`
+type storageServer struct {
+	store *storage.Storage
 }
 
-var data []Data
+func NewStorageServer(c config) *storageServer {
+	store := storage.New(c.Influx.Token, c.Influx.Host, c.Influx.Port, "Hivee")
+	return &storageServer{store: store}
+}
+
+type config struct {
+	Influx struct {
+		Token string `yaml:"token"`
+		Host  string `yaml:"host"`
+		Port  int    `yaml:"port"`
+	}
+}
+
+func (c *config) getConfig() *config {
+	yamlFile, err := ioutil.ReadFile("config.yml")
+	if err != nil {
+		log.Errorf("Config: %v", err.Error())
+	}
+
+	err = yaml.Unmarshal(yamlFile, c)
+	if err != nil {
+		log.Errorf("Config: %v", err.Error())
+	}
+
+	return c
+}
 
 func renderJSON(w http.ResponseWriter, v interface{}) {
 	js, err := json.Marshal(v)
@@ -27,16 +55,27 @@ func renderJSON(w http.ResponseWriter, v interface{}) {
 	w.Write(js)
 }
 
-func handler(w http.ResponseWriter, r *http.Request) {
-	renderJSON(w, data)
+func (s *storageServer) getMeasureHistoryHandler(w http.ResponseWriter, req *http.Request) {
+	v := req.URL.Query()
+	measurement := v.Get("measurement")
+	location := v.Get("location")
+	history := s.store.ReadMeasureHistory(measurement, location)
+
+	renderJSON(w, history)
 }
 
 func main() {
+	formatter := &log.TextFormatter{TimestampFormat: "2006-01-02 15:04:05", FullTimestamp: true}
+	log.SetFormatter(formatter)
+
+	var c config
+	c.getConfig()
+
+	server := NewStorageServer(c)
 	router := mux.NewRouter()
 	router.StrictSlash(true)
 
-	data = append(data, Data{Content: "Some content"})
-	router.HandleFunc("/", handler).Methods("GET")
+	router.HandleFunc("/history", server.getMeasureHistoryHandler).Methods("GET")
 
 	router.Use(func(h http.Handler) http.Handler {
 		return handlers.LoggingHandler(os.Stdout, h)
@@ -45,6 +84,7 @@ func main() {
 
 	serverDomain := "localhost"
 	serverPort := 8000
-	log.Printf("Listening at %s:%d", serverDomain, serverPort)
+	log.Infof("Listening at %s:%d", serverDomain, serverPort)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf("%s:%d", serverDomain, serverPort), router))
+	server.store.Close()
 }
