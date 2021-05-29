@@ -82,7 +82,7 @@ func main() {
 	})
 	router.Use(handlers.RecoveryHandler(handlers.PrintRecoveryStack(true)))
 
-	serverDomain := "localhost"
+	serverDomain := "0.0.0.0"
 	serverPort := 8000
 	log.Infof("Listening at %s:%d", serverDomain, serverPort)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf("%s:%d", serverDomain, serverPort), router))
