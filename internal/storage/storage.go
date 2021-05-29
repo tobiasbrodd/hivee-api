@@ -34,7 +34,6 @@ func (storage *Storage) ReadMeasureHistory(measurement string, location string) 
 	var history []coretypes.Measure
 	if err == nil {
 		for result.Next() {
-			log.Infof("Value: %v\n", result.Record().String())
 			value, _ := strconv.ParseFloat(fmt.Sprintf("%v", result.Record().Value()), 64)
 			timestamp := result.Record().Time().Unix()
 			history = append(history, coretypes.Measure{Value: value, Timestamp: timestamp})
