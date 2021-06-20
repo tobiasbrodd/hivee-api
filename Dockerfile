@@ -13,4 +13,5 @@ RUN go install -v ./...
 RUN go build
 
 # start app
+EXPOSE 8000
 CMD ["hivee-api"]
