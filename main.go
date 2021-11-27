@@ -57,9 +57,12 @@ func renderJSON(w http.ResponseWriter, v interface{}) {
 
 func (s *storageServer) getMeasureHistoryHandler(w http.ResponseWriter, req *http.Request) {
 	v := req.URL.Query()
+	start := v.Get("start")
+	stop := v.Get("stop")
 	measurement := v.Get("measurement")
 	location := v.Get("location")
-	history := s.store.ReadMeasureHistory(measurement, location)
+	every := v.Get("every")
+	history := s.store.ReadMeasureHistory(start, stop, measurement, location, every)
 
 	renderJSON(w, history)
 }

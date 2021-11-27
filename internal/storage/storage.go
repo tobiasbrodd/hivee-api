@@ -16,17 +16,32 @@ type Storage struct {
 	Organization string
 }
 
-func (storage *Storage) ReadMeasureHistory(measurement string, location string) []coretypes.Measure {
+func (storage *Storage) ReadMeasureHistory(start string, stop string, measurement string, location string, every string) []coretypes.Measure {
 	log.Infof("Reading measurement %s: %s\n", measurement, location)
+	if len(start) == 0 {
+		start = "-30d"
+	}
+	if len(stop) == 0 {
+		stop = "now()"
+	}
+	if len(measurement) == 0 {
+		measurement = "temperature"
+	}
+	if len(location) == 0 {
+		location = "Indoor"
+	}
+	if len(every) == 0 {
+		every = "1d"
+	}
 
 	bucket := "hivee"
 	query := fmt.Sprintf(`from(bucket: "%s")
-	|> range(start: -30d)
+	|> range(start: "%s", stop: "%s")
 	|> filter(fn: (r) => r["_measurement"] == "%s")
 	|> filter(fn: (r) => r["_field"] == "value")
 	|> filter(fn: (r) => r["location"] == "%s")
-	|> aggregateWindow(every: 1h, fn: mean, createEmpty: false)
-	|> yield(name: "mean")`, bucket, measurement, location)
+	|> aggregateWindow(every: "%s", fn: mean, createEmpty: false)
+	|> yield(name: "mean")`, bucket, start, stop, measurement, location, every)
 
 	reader := storage.getReader()
 	result, err := (*reader).Query(context.Background(), query)
