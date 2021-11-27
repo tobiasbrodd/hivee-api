@@ -36,11 +36,11 @@ func (storage *Storage) ReadMeasureHistory(start string, stop string, measuremen
 
 	bucket := "hivee"
 	query := fmt.Sprintf(`from(bucket: "%s")
-	|> range(start: "%s", stop: "%s")
+	|> range(start: %s, stop: %s)
 	|> filter(fn: (r) => r["_measurement"] == "%s")
 	|> filter(fn: (r) => r["_field"] == "value")
 	|> filter(fn: (r) => r["location"] == "%s")
-	|> aggregateWindow(every: "%s", fn: mean, createEmpty: false)
+	|> aggregateWindow(every: %s, fn: mean, createEmpty: false)
 	|> yield(name: "mean")`, bucket, start, stop, measurement, location, every)
 
 	reader := storage.getReader()
