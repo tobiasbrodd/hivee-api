@@ -16,6 +16,18 @@ type Storage struct {
 	Organization string
 }
 
+func getValue(result *api.QueryTableResult, measurement string) interface{} {
+	sValue := fmt.Sprintf("%v", result.Record().Value())
+
+	if measurement == "contact" {
+		value, _ := strconv.ParseBool(sValue)
+		return value
+	} else {
+		value, _ := strconv.ParseFloat(sValue, 64)
+		return value
+	}
+}
+
 func (storage *Storage) ReadMeasureHistory(start string, stop string, measurement string, location string, every string) []coretypes.Measure {
 	log.Infof("Reading measurement %s: %s\n", measurement, location)
 	if len(start) == 0 {
@@ -49,7 +61,7 @@ func (storage *Storage) ReadMeasureHistory(start string, stop string, measuremen
 	var history []coretypes.Measure
 	if err == nil {
 		for result.Next() {
-			value, _ := strconv.ParseFloat(fmt.Sprintf("%v", result.Record().Value()), 64)
+			value := getValue(result, measurement)
 			timestamp := result.Record().Time().Unix()
 			history = append(history, coretypes.Measure{Value: value, Timestamp: timestamp})
 		}
